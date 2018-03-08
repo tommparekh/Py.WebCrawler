@@ -3,27 +3,12 @@
 import requests
 from bs4 import BeautifulSoup
 import time
+import urllib
 
 #Open an article
 
-start_url = "https://en.wikipedia.org/wiki/The_Lumberjack_Song"
+start_url = "https://en.wikipedia.org/wiki/Special:Random"
 end_url = "https://en.wikipedia.org/wiki/Philosophy"
-
-
-article_chain = []
-
-
-#while title of page istn't 'Philosophy' and we have not discovered a cycle:
-#	append page to article_chain
-#	download the page content
-#	find the first link in  the content
-#	page = that link
-#	pause for a second
-
-
-
-
-
 
 def continue_crawl(search_history, target_url, max_step=25):
 	#if the most recent article in the search_history is the target article the search should stop and the function should return False
@@ -43,53 +28,55 @@ def continue_crawl(search_history, target_url, max_step=25):
 	else:
 		return True
 
-
 #Find the first link in the article
 def find_first_link(url):
 	# get the HTML from "url", use the requests library
-	resonse = requests.get(url)
+	response = requests.get(url)
 	html = response.text
 
     # feed the HTML into Beautiful Soup
-    soup = BeautifulSoup(html, 'html.parser')
+	soup = BeautifulSoup(html, 'html.parser')
 
     # find the first link in the article
     #soup.find(id='mw-content-text').find(class_="mw-parser-output").p.a['href']
-
-    content_div = soup.find(id="mw-content-text").find(class_="mw-parser-output")
 	
+	first_link = None
+	content_div = soup.find(id="mw-content-text").find(class_="mw-parser-output")
+	
+	# Find the first anchor tag that's a direct child of a paragraph.
+    # It's important to only look at direct children, because other types
+    # of link, e.g. footnotes and pronunciation, could come before the
+    # first link to an article. Those other link types aren't direct
+    # children though, they're in divs of various classes.
+
 	for element in content_div.find_all("p", recursive=False):
-    if element.a:
-        first_relative_link = element.a.get('href')
-        break
-
-    first_link = "a url or None"
-
+		if element.find("a", recursive=False):
+			first_link = element.find("a", recursive=False).get('href')
+			break
+   
     # return the first link as a string, or return None if there is no link
-    if first_link:
-    	return first_link
+	if not first_link:
+		return
+	
+	first_link = urllib.parse.urljoin('https://en.wikipedia.org/', first_link)
+	return first_link
 
-
+article_chain = [start_url]
 
 while continue_crawl(article_chain, end_url):
 	# download html of last article in article_chain
     # find the first link in that html
 
-    first_link = find_first_link(article_chain[-1])
+	first_link = find_first_link(article_chain[-1])
+	print(first_link)
+	if not first_link:
+		# add the first link to article_chain
+		print("We've arrived at an article with no links, aborting search!")
+		break
 
-    # add the first link to article_chain
-    article_chain.append(first_link)
+	article_chain.append(first_link)
 
     # delay for about two seconds
-    time.sleep(2)
+	#btime.sleep(2)
 
 
-
-#Follow the link
-
-
-#Record the link in the article_chain data structure.
-
-
-
-#Repeat this process until we reach the Philosophy article, or get stuck in an article cycle.
