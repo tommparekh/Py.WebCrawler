@@ -1,4 +1,4 @@
-#Create a web crawler
+#Create a web crawler example from Udacity course.
 
 import requests
 from bs4 import BeautifulSoup
